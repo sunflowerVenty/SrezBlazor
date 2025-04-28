@@ -1,6 +1,7 @@
 ﻿@page "/"
 
 @using System.ComponentModel.DataAnnotations
+@using CpCinemaBlazor.ApiRequest.Model
 @using Microsoft.AspNetCore.Components.Authorization
 @using SrezBlazor.ApiRequest.Model
 @using Microsoft.AspNetCore.Authentication
@@ -22,13 +23,14 @@
         <section>
             <EditForm Model="@Input" OnValidSubmit="AuthBtn" FormName="LoginForm">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
+                <h2>Сервис проката настольных игр</h2>
+                <h2>Авторизуйтесь</h2>
                 <hr />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" />
-                    <label for="email" class="form-label">Почта</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    <InputText @bind-Value="Input.Login" class="form-control" autocomplete="username" aria-required="true" />
+                    <label for="Login" class="form-label">Почта</label>
+                    <ValidationMessage For="() => Input.Login" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
                     <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true"/>
@@ -40,7 +42,7 @@
                 </div>
                 <div>
                     <p>
-                        <a href="/Account/Registration">Forgot your password?</a>
+                        <a href="/Registration">Я не зарегистрирован</a>
                     </p>
                 </div>
             </EditForm>
@@ -49,7 +51,7 @@
 </div>
 
 @code {
-    UserGet user = new UserGet();
+    UserAuth user = new UserAuth();
     [Inject] private ApiRequestService ApiRequest_ { get; set; }
 
     private string? errorMessage;
@@ -68,8 +70,7 @@
     private sealed class InputModel
     {
         [Required]
-        [EmailAddress]
-        public string Email { get; set; } = "";
+        public string Login { get; set; } = "";
 
         [Required]
         [DataType(DataType.Password)]
@@ -81,9 +82,14 @@
 
     async Task AuthBtn()
     {
+        if (SingletoneUser.up == null)
+        {
+            SingletoneUser.up = new UserProd();
+        }
+
         try
         {
-            user.Email = Input.Email;
+            user.Login = Input.Login;
             user.Password = Input.Password;
 
             var token = await ApiRequest_.AuthorizationAsync(user);
@@ -92,19 +98,19 @@
             {
                 var principal = JwtService.DecodeJwtToken(token);
 
-                int id_User = Convert.ToInt32(principal.FindFirst("id_User")?.Value);
-                string Name = principal.FindFirst("Name")?.Value;
-                string LastName = principal.FindFirst("LastName")?.Value;
-                string Login = principal.FindFirst("Login")?.Value;
-                string Password = principal.FindFirst("Password")?.Value;
-                string Email = principal.FindFirst("Email")?.Value;
-                bool isAdmin = Convert.ToBoolean(principal.FindFirst("isAdmin")?.Value);
+                SingletoneUser.up.id_User = Convert.ToInt32(principal.FindFirst("id_User")?.Value);
+                SingletoneUser.up.Name = principal.FindFirst("Name")?.Value;
+                SingletoneUser.up.LastName = principal.FindFirst("LastName")?.Value;
+                SingletoneUser.up.Login = principal.FindFirst("Login")?.Value;
+                SingletoneUser.up.Password = principal.FindFirst("Password")?.Value;
+                SingletoneUser.up.Email = principal.FindFirst("Email")?.Value;
+                SingletoneUser.up.isAdmin = Convert.ToBoolean(principal.FindFirst("isAdmin")?.Value);
                 
-                if (isAdmin == true)
+                if (SingletoneUser.up.isAdmin == true)
                 {
                     Navigation.NavigateTo("/adminpage");
                 }
-                else if (isAdmin == false)
+                else if (SingletoneUser.up.isAdmin == false)
                 {
                     Navigation.NavigateTo("/userpage");
                 }

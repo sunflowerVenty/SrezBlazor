@@ -94,9 +94,9 @@ namespace SrezBlazor
             return token;
         }
 
-        public async Task<string> AuthorizationAsync(UserGet auth)
+        public async Task<string> AuthorizationAsync(UserAuth userAuth)
         {
-            var response = await _httpClient.PostAsJsonAsync("http://localhost:5215/api/Users/Authorization", auth);
+            var response = await _httpClient.PostAsJsonAsync("http://localhost:5215/api/Users/Authorization", userAuth);
 
             if (!response.IsSuccessStatusCode)
             {

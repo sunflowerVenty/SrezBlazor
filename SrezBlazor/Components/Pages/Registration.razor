@@ -105,6 +105,7 @@
             user.Email = Input.Email;
             user.Login = Input.Login;
             user.Password = Input.Password;
+            user.isAdmin = false;
 
             var token = await ApiRequest.CreateUserAsync(user);
 
@@ -120,14 +121,8 @@
                 string Email = principal.FindFirst("Email")?.Value;
                 bool isAdmin = Convert.ToBoolean(principal.FindFirst("isAdmin")?.Value);
 
-                if (isAdmin == true)
-                {
-                    Navigation.NavigateTo("/adminpage");
-                }
-                else if (isAdmin == false)
-                {
-                    Navigation.NavigateTo("/userpage");
-                }
+                Navigation.NavigateTo("/");
+                
             }
             else
             {
