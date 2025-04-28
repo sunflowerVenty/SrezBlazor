@@ -12,6 +12,11 @@
         public bool Edit { get; set; } = false;
     }
 
+    public class UserShort
+    {
+        UserGet userGet { get; set; }
+        bool Status { get; set; }
+    }
     public class UserProd
     {
         public int id_User { get; set; }

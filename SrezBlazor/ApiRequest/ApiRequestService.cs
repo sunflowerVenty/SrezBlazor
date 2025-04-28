@@ -33,12 +33,12 @@ namespace SrezBlazor
                     return [];
                 }
 
-                var usersData = JsonSerializer.Deserialize<List<UserGet>>(responseContent, new JsonSerializerOptions //
+                var usersData = JsonSerializer.Deserialize<List<UserShort>>(responseContent, new JsonSerializerOptions //
                 {
                     PropertyNameCaseInsensitive = true
                 });
 
-                return usersData ?? [];
+                return usersData.userGet ?? [];
             }
             catch (Exception ex)
             {
