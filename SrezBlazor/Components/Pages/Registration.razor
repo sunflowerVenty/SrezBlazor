@@ -1,0 +1,143 @@
+﻿@page "/Registration"
+
+@using System.ComponentModel.DataAnnotations
+@using SrezBlazor.ApiRequest.Model
+@using Microsoft.AspNetCore.Authentication
+@using SrezBlazor.ApiRequest
+@using System
+@using System.IdentityModel.Tokens.Jwt
+@using System.Security.Claims
+@using static SrezBlazor.Components.Pages.Login
+
+@inject ILogger<Login> Logger
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Регистрация</PageTitle>
+
+<h1>Регистрация</h1>
+<div class="row">
+    <div class="col-md-4">
+        <section>
+            <EditForm Model="@Input" OnValidSubmit="RegBtn" FormName="RegForm">
+                <DataAnnotationsValidator />
+                <hr />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" />
+                    <label for="email" class="form-label">Почта</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Login" class="form-control" autocomplete="username" aria-required="true" />
+                    <label for="Login" class="form-label">Логин</label>
+                    <ValidationMessage For="() => Input.Login" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true"/>
+                    <label for="password" class="form-label">Пароль</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Name" class="form-control" autocomplete="username" aria-required="true" />
+                    <label for="email" class="form-label">Имя</label>
+                    <ValidationMessage For="() => Input.Name" class="text-danger" />
+                </div>
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.LastName" class="form-control" autocomplete="username" />
+                    <label for="LastName" class="form-label">Фамилия</label>
+                    <ValidationMessage For="() => Input.LastName" class="text-danger" />
+                </div>
+
+                <div>
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Зарегистрироваться</button>
+                </div>
+            </EditForm>
+        </section>
+    </div>
+</div>
+
+@code {
+    AddUser user = new AddUser();
+    [Inject] private ApiRequestService ApiRequest { get; set; }
+    private string errorMessage;
+
+    private List<NotificationService.NotificationModel> Notifications = new List<NotificationService.NotificationModel>();
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Required]
+        public string Login { get; set; } = "";
+
+        [Required]
+        public string Name { get; set; } = "";
+
+        public string LastName { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+
+    async Task RegBtn()
+    {
+        try
+        {
+            user.Name = Input.Name;
+            user.LastName = Input.LastName;
+            user.Email = Input.Email;
+            user.Login = Input.Login;
+            user.Password = Input.Password;
+
+            var token = await ApiRequest.CreateUserAsync(user);
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                var principal = JwtService.DecodeJwtToken(token);
+
+                int id_User = Convert.ToInt32(principal.FindFirst("id_User")?.Value);
+                string Name = principal.FindFirst("Name")?.Value;
+                string LastName = principal.FindFirst("LastName")?.Value;
+                string Login = principal.FindFirst("Login")?.Value;
+                string Password = principal.FindFirst("Password")?.Value;
+                string Email = principal.FindFirst("Email")?.Value;
+                bool isAdmin = Convert.ToBoolean(principal.FindFirst("isAdmin")?.Value);
+
+                if (isAdmin == true)
+                {
+                    Navigation.NavigateTo("/adminpage");
+                }
+                else if (isAdmin == false)
+                {
+                    Navigation.NavigateTo("/userpage");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Authorization failed: No token received");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Произошла ошибка при регистрации.";
+        }
+
+    }
+}

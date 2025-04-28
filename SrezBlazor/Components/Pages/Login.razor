@@ -1,0 +1,148 @@
+﻿@page "/"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using SrezBlazor.ApiRequest.Model
+@using Microsoft.AspNetCore.Authentication
+@using SrezBlazor.ApiRequest
+@using System
+@using System.IdentityModel.Tokens.Jwt
+@using System.Security.Claims
+
+@inject ILogger<Login> Logger
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Log in</PageTitle>
+
+<h1>Log in</h1>
+<div class="row">
+    <div class="col-md-4">
+        <section>
+            <EditForm Model="@Input" OnValidSubmit="AuthBtn" FormName="LoginForm">
+                <DataAnnotationsValidator />
+                <h2>Use a local account to log in.</h2>
+                <hr />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" />
+                    <label for="email" class="form-label">Почта</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true"/>
+                    <label for="password" class="form-label">Пароль</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                <div>
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                </div>
+                <div>
+                    <p>
+                        <a href="/Account/Registration">Forgot your password?</a>
+                    </p>
+                </div>
+            </EditForm>
+        </section>
+    </div>
+</div>
+
+@code {
+    UserGet user = new UserGet();
+    [Inject] private ApiRequestService ApiRequest_ { get; set; }
+
+    private string? errorMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+
+    async Task AuthBtn()
+    {
+        try
+        {
+            user.Email = Input.Email;
+            user.Password = Input.Password;
+
+            var token = await ApiRequest_.AuthorizationAsync(user);
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                var principal = JwtService.DecodeJwtToken(token);
+
+                int id_User = Convert.ToInt32(principal.FindFirst("id_User")?.Value);
+                string Name = principal.FindFirst("Name")?.Value;
+                string LastName = principal.FindFirst("LastName")?.Value;
+                string Login = principal.FindFirst("Login")?.Value;
+                string Password = principal.FindFirst("Password")?.Value;
+                string Email = principal.FindFirst("Email")?.Value;
+                bool isAdmin = Convert.ToBoolean(principal.FindFirst("isAdmin")?.Value);
+                
+                if (isAdmin == true)
+                {
+                    Navigation.NavigateTo("/adminpage");
+                }
+                else if (isAdmin == false)
+                {
+                    Navigation.NavigateTo("/userpage");
+                }
+            }
+            else
+            {
+                errorMessage = "Authorization failed: No token received";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Authorization failed: {ex.Message}";
+        }
+    }
+
+    public class JwtService
+    {
+        public static ClaimsPrincipal DecodeJwtToken(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+
+            // Проверяем, является ли токен валидным JWT
+            if (handler.CanReadToken(token))
+            {
+                // Декодируем токен
+                var jwtToken = handler.ReadJwtToken(token);
+
+                // Извлекаем claims (данные) из токена
+                var claims = jwtToken.Claims;
+
+                // Создаем ClaimsPrincipal для работы с данными
+                var identity = new ClaimsIdentity(claims, "jwt");
+                var principal = new ClaimsPrincipal(identity);
+
+                return principal;
+            }
+
+            throw new Exception("Invalid JWT token");
+        }
+    }
+}
